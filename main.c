@@ -50,51 +50,12 @@ int count_fork(char *command)
 	return cnt_pipe;
 }
 
-// t_list	*tokenize_command(char *command)
-// {
-// 	char	**token;
-// 	t_list	*cmd;
-// 	int		i;
-
-// 	i = 0;
-// 	while(command[i])
-// 	{
-// 		while(ft_isspace(command[i]))
-// 		{
-// 			i++;
-// 		}
-// 		if(command[i] == '>')
-// 		{
-// 			if(command[i + 1] == '>' && command[i + 2] != '>' || command[i + 2] != '<')
-// 			{
-// 				cmd = ft_lstnew('>>');
-// 			}
-// 			else
-// 			{
-// 				cmd = ft_lstnew('>');
-// 			}
-// 		}
-// 		if(command[i] == '<')
-// 		{
-// 			if(command[i + 1] == '<' && command[i + 2] != '<' || command[i + 2] != '>')
-// 			{
-// 					cmd = ft_lstnew('<<');
-// 			}
-// 			else
-// 			{
-// 				cmd = ft_lstnew('<');
-// 			}
-// 		}
-// 		break;
-// 	}
-// 	return cmd;
-// }
-
-t_list *tokenize_command(char *command)
+t_list *tokenize_command(char *command, t_list **lst)
 {
     t_list *cmd ;
     char *content;
     int i = 0;
+	int j = 0;
 
     while (command[i])
 	{
@@ -128,14 +89,23 @@ t_list *tokenize_command(char *command)
         }
 		else
 		{
-            continue;
+			while (ft_isspace(command[i]))
+			{
+            	i++;
+        	}
+			j = i;
+			while(ft_isprint(command[i]))
+			{
+				i++;
+			}
+			content = ft_substr(command, j, i - j);
         }
         cmd = ft_lstnew(content);
+		ft_lstadd_back(lst, cmd);
         if (!cmd)
 		{
             return NULL;
         }
-        break;
     }
     return cmd;
 }
@@ -145,9 +115,14 @@ t_list *tokenize_command(char *command)
 
 int main()
 {
-	char *str = "<<";
+	char *str = "<< ls - al > a";
 	char **command = ft_split(str, '|');
-	t_list *lst = tokenize_command(command[0]);
-	//count_fork(str);
-	printf("%s\n",lst->content);
+	t_list *lst = malloc(sizeof(t_list));
+	lst = tokenize_command(command[0], &lst);
+	while(lst)
+	{
+		t_list *tmp = lst->next;
+		printf("%s\n",lst->content);
+		lst = tmp;
+	}
 }
