@@ -142,7 +142,7 @@ void tokenize_command(char *command, t_queue **queue)
 
 int main()
 {
-    char *str = "ls -al > A > A> A> A> A> A> A>A | ls - al | cat -e";
+    char *str = "ls -al > Aasd > Aasd> Asd> A> A> A> A>A | ls - al | cat -e";
 	// | 로 시작하거나 | 로 끝나는 것들은 처리해야할까?
     char **command = ft_split(str, '|');
 	int i = 0;
@@ -164,7 +164,4 @@ int main()
 		}
 		i++;
 	}
-
-	pid_t pid;
-
 }
