@@ -26,6 +26,9 @@
 *.a
 *.lib
 
+*.dYSM
+*.out
+
 # Executables
 *.exe
 *.out
