@@ -1,167 +1,160 @@
 #include "main.h"
 
-t_queue	*init_queue(void)
+int ft_isspace(int c)
 {
-	t_queue	*queue;
-
-	queue = (t_queue *)malloc(sizeof(t_queue));
-	//가드
-	queue->head = NULL;
-	queue->tail = NULL;
-	return (queue);
+    if((c >= 9 && c <= 13) || c == 32)
+        return 1;
+    return 0;
 }
 
-t_node	*create_node(char *content)
+t_command *init_command(void)
 {
-	t_node	*new_node;
+    t_command *cmd;
 
-	new_node = (t_node *)malloc(sizeof(t_node));
-	//가드
-	new_node->content = content;
-	new_node->next = NULL;
-	new_node->prev = NULL;
-	return (new_node);
+    cmd = malloc(sizeof(t_command));
+    cmd->command = NULL;
+
+    return cmd;
 }
 
-void	insert_node(t_queue *queue, t_node *node)
+void init_redirection(t_redirection **redirection)
 {
-	if (!queue->head)
-	{
-		queue->head = node;
-		queue->tail = node;
-	}
-	else
-	{
-		queue->tail->next = node;
-		node->prev = queue->tail;
-		queue->tail = node;
-	}
+    (*redirection) = malloc(sizeof(t_redirection));
+    (*redirection)->double_left_brace = init_command();
+    (*redirection)->double_right_brace = init_command();
+    (*redirection)->command = init_command();
+    (*redirection)->left_brace = init_command();
+    (*redirection)->right_brace = init_command();
 }
 
-int ft_isspace(char c)
+char **add_command(char ***cmd, char *str)
 {
-    if ((c >= 9 && c <= 13) || c == 32)
-    {
-        return (1);
-    }
-    return (0);
-}
-
-
-int count_fork(char *command)
-{
-    int cnt_pipe;
     int i = 0;
+    char **new_cmd;
 
-	if(ft_strlen(command) == 0)
-		return -1;
-    cnt_pipe = 0;
-    while (command[i])
+    if (*cmd == NULL)
     {
-        if (command[i] == '|')
-        {
-            cnt_pipe++;
-        }
+        new_cmd = malloc(sizeof(char *) * 2);
+        if (new_cmd == NULL) return NULL;
+        new_cmd[0] = ft_strdup(str);
+        new_cmd[1] = NULL;
+        return new_cmd;
+    }
+    while ((*cmd)[i])
         i++;
-    }
-    return cnt_pipe;
+    new_cmd = malloc(sizeof(char *) * (i + 2));
+    if (new_cmd == NULL) return NULL;
+    for (int j = 0; j < i; j++)
+        new_cmd[j] = ft_strdup((*cmd)[j]);
+    new_cmd[i] = ft_strdup(str);
+    new_cmd[i + 1] = NULL;
+    free(*cmd);
+
+    return new_cmd;
 }
 
-void skip_whitespace(char *command, int *i)
+void ft_free1(char ***command)
 {
-    while (ft_isspace(command[*i]))
-        (*i)++;
-}
+    int i;
 
-char *parse_redirection(char *command, int *i)
-{
-    char *content;
-    if (command[*i] == '>')
+    i = 0;
+    if((*command))
     {
-        if (command[*i + 1] == '>')
+        while((*command)[i])
         {
-            content = ft_strdup(">>");
-            (*i) += 2;
-        }
-        else
-        {
-            content = ft_strdup(">");
-            (*i)++;
+            free((*command)[i]);
+            i++;
         }
     }
-    else if (command[*i] == '<')
-    {
-        if (command[*i + 1] == '<')
-        {
-            content = ft_strdup("<<");
-            (*i) += 2;
-        }
-        else
-        {
-            content = ft_strdup("<");
-            (*i)++;
-        }
-    }
-    else
-    {
-        content = NULL;
-    }
-    return content;
-}
-
-char *parse_word(char *command, int *i)
-{
-    int j = *i;
-    while (command[*i] && !ft_isspace(command[*i]) && command[*i] != '>' && command[*i] != '<')
-        (*i)++;
-    return ft_substr(command, j, *i - j);
-}
-
-void tokenize_command(char *command, t_queue **queue)
-{
-    char *content;
-    int i = 0;
-
-    while (command[i])
-    {
-        skip_whitespace(command, &i);
-        if (command[i] == '>' || command[i] == '<')
-        {
-            content = parse_redirection(command, &i);
-        }
-        else
-        {
-            content = parse_word(command, &i);
-        }
-        if (content)
-        {
-            insert_node(*queue, create_node(content));
-        }
-    }
+	*command = NULL;
+	free(*command);
 }
 
 int main()
 {
-    char *str = "ls -al > Aasd > Aasd> Asd> A> A> A> A>A | ls - al | cat -e";
-	// | 로 시작하거나 | 로 끝나는 것들은 처리해야할까?
-    char **command = ft_split(str, '|');
-	int i = 0;
-    t_queue **queue_command = malloc(sizeof(t_queue) * count_fork(str) + 1);
-	while(i < count_fork(str) + 1)
-	{
-		queue_command[i] = init_queue();
-		tokenize_command(command[i], &queue_command[i]);
-		i++;
-	}
+    char *str = "         \0";
+    t_redirection *command;
+    char *content;
+    init_redirection(&command);
+    int i = 0;
+    int flag = 0;
+    int j;
+
+	if(str == NULL)
+		exit(0);
+    while(str[i])
+    {
+		flag = 0;
+        while(ft_isspace(str[i]))
+            i++;
+        if(str[i] == '<')
+        {
+            i++;
+            if(str[i] && str[i] == '<')
+            {
+                i++;
+                flag = 1;
+            }
+            while(ft_isspace(str[i]))
+                i++;
+            j = i;
+            while (str[i] && !ft_isspace(str[i]) && str[i] != '>' && str[i] != '<')
+                i++;
+            content = ft_substr(str, j, i - j);
+            if(flag == 1)
+            {
+                command->double_left_brace->command = add_command(&command->double_left_brace->command ,content);
+            }
+			else
+				command->left_brace->command = add_command(&command->left_brace->command ,content);
+        }
+        else if(str[i] == '>')
+        {
+            i++;
+            if(str[i] && str[i] == '>')
+            {
+                i++;
+                flag = 1;
+            }
+            while(ft_isspace(str[i]))
+                i++;
+            j = i;
+            while (str[i] && !ft_isspace(str[i]) && str[i] != '>' && str[i] != '<')
+                i++;
+            content = ft_substr(str, j, i - j);
+        }
+        else
+        {
+            j = i;
+            while (str[i] && !ft_isspace(str[i]) && str[i] != '>' && str[i] != '<')
+                i++;
+            content = ft_substr(str, j, i - j);
+        }
+        free(content);
+        i++;
+    }
 	i = 0;
-	while(i < count_fork(str) + 1)
+	while(command->left_brace->command[i])
 	{
-		t_node *tmp = queue_command[i]->head;
-		while(tmp)
+		int fd = open(command->left_brace->command[i], O_WRONLY);
 		{
-			printf("%s\n", tmp->content);
-			tmp = tmp->next;
+			if(fd == -1)
+			{
+				perror(command->left_brace->command[i]);
+				exit(1);
+			}
 		}
 		i++;
 	}
+    ft_free1(&command->double_left_brace->command);
+    ft_free1(&command->left_brace->command);
+    ft_free1(&command->double_right_brace->command);
+    ft_free1(&command->right_brace->command);
+    ft_free1(&command->command->command);
+    free(command->double_left_brace);
+	free(command->left_brace);
+	free(command->command);
+	free(command->double_right_brace);
+	free(command->right_brace);
+	free(command);
 }
