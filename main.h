@@ -7,6 +7,7 @@
 typedef struct s_command
 {
 	char	**command;
+	bool	order;
 }				t_command;
 
 typedef struct s_redirection
