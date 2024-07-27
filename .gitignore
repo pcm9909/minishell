@@ -26,6 +26,7 @@
 *.a
 *.lib
 
+# custom
 *.dYSM
 *.out
 
