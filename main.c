@@ -135,6 +135,11 @@ void parse_left_redirection(const char *str, int *i, t_redirection *command)
     j = *i;
     while (str[*i] && !is_whitespace(str[*i]) && str[*i] != '>' && str[*i] != '<')
         (*i)++;
+    if (str[*i] == '>' || str[*i] == '<')
+    {
+        fprintf(stderr, "zsh: parse error near `%c'\n", str[*i]);
+        exit(258);
+    }
     content = ft_substr(str, j, *i - j);
     if (flag == 1)
         command->double_left_brace->command = append_command(&command->double_left_brace->command, content);
@@ -156,6 +161,12 @@ void parse_right_redirection(char *str, int *i, t_redirection *command)
     }
     while (is_whitespace(str[*i]))
         (*i)++;
+    if (str[*i] == '>' || str[*i] == '<' || str[*i] == '\0' || str[*i] == '|' || str[*i] == '&' || str[*i] == ';') 
+    {
+        //에러 출력부 변경필요!
+        fprintf(stderr, "zsh: parse error near `%c'\n", str[*i]);   
+        exit(258);
+    }
     j = *i;
     while (str[*i] && !is_whitespace(str[*i]) && str[*i] != '>' && str[*i] != '<')
         (*i)++;
@@ -167,59 +178,12 @@ void parse_right_redirection(char *str, int *i, t_redirection *command)
     free(content);
 }
 
-char	*ft_strrev(char *str)
-{
-	int	len;
-	int	i;
-	char	tmp;
 
-	len = 0;
-	i = 0;
-	while (str[len])
-		len++;
-	len -= 1;
-	while (i < len)
-	{
-		tmp = str[i];
-		str[i] = str[len];
-		str[len] = tmp;
-		i++;
-		len--;
-	}
-	return (str);
-}
-
-char *find_brace(char *str, char brace)
-{
-	int i = 0;
-	int flag = 0;
-	if(str[i] = brace)
-	{
-		while(is_whitespace(str[i]) && str[i])
-		{
-			i++;
-			flag = 1;
-		}
-		if(ft_strnstr(str[i], "<<", sizeof(str[i])) || ft_strnstr(str[i], ">>>", sizeof(str[i])) || (flag == 1 && ft_strnstr(str[i], "<", sizeof(str[i]))))
-		{
-			// bash: 예기치 않은 토큰 `<' 근처에서 문법 오류 만들어야함
-			exit(2);
-		}
-
-
-	}
-}
-
-void set_order(t_redirection *command, char *str)
-{
-
-}
 
 void parse_redirection(char *str, t_redirection *command)
 {
     int i = 0;
 
-	set_order(command, str);
     while (str[i])
     {
         while (is_whitespace(str[i]))
@@ -325,7 +289,7 @@ void free_redirection(t_redirection **redirection)
 
 int main(int argc, char **argv, char **envp)
 {
-    char *str = "<a <<b <<c <<d <<e\0";
+    char *str = "<< <a\0";
     t_redirection *command;
 
     initialize_redirection(&command);
@@ -333,12 +297,10 @@ int main(int argc, char **argv, char **envp)
         exit(EXIT_FAILURE);
 
     parse_redirection(str, command);
-	printf("n = %d\n", command->left_brace->order);
-	printf("d = %d\n", command->double_left_brace->order);
-	// open_redirection_files0(command);
-   	// open_redirection_files1(command);
-	// open_redirection_files2(command);
-	// open_redirection_files3(command);
+	open_redirection_files0(command);
+   	open_redirection_files1(command);
+	open_redirection_files2(command);
+	open_redirection_files3(command);
     free_redirection(&command);
     return 0;
 }
