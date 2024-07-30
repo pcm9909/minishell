@@ -178,7 +178,20 @@ void parse_right_redirection(char *str, int *i, t_redirection *command)
     free(content);
 }
 
+void parse_command(char *str, int *i, t_redirection *command)
+{
+    int j;
+    char *content;
 
+    while (is_whitespace(str[*i]))
+        (*i)++;
+    j = *i;
+    while (str[*i] && !is_whitespace(str[*i]) && str[*i] != '>' && str[*i] != '<')
+        (*i)++;
+    content = ft_substr(str, j, *i - j);
+    command->command->command = append_command(&command->command->command, content);
+    free(content);
+}
 
 void parse_redirection(char *str, t_redirection *command)
 {
@@ -195,6 +208,10 @@ void parse_redirection(char *str, t_redirection *command)
         else if (str[i] == '>')
         {
             parse_right_redirection(str, &i, command);
+        }
+        else
+        {
+            parse_command(str, &i, command);
         }
     }
 }
