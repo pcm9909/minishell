@@ -571,3 +571,4 @@ int main(int argc, char **argv, char **envp)
 }
 
 //만약에 실패시 dup2사용 아니면
+.
