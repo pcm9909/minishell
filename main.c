@@ -1,9 +1,5 @@
 #include "main.h"
-#include <stdlib.h>
-#include <stdio.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <readline/readline.h>
+
 
 char *local;
 
@@ -145,9 +141,15 @@ void parse_left_redirection(const char *str, int *i, t_redirection *command)
         (*i)++;
 	content = ft_substr(str, j, *i - j);
     if (flag == 1)
+	{
+		command->double_left_brace->exist = true;
         command->double_left_brace->command = append_command(&command->double_left_brace->command, content);
+	}
     else
+	{
+		command->left_brace->exist = true;
         command->left_brace->command = append_command(&command->left_brace->command, content);
+	}
     free(content);
 }
 
@@ -175,9 +177,15 @@ void parse_right_redirection(char *str, int *i, t_redirection *command)
         (*i)++;
     content = ft_substr(str, j, *i - j);
     if (flag == 1)
+	{
+		command->double_right_brace->exist = true;
         command->double_right_brace->command = append_command(&command->double_right_brace->command, content);
+	}
     else
+	{
+		command->right_brace->exist = true;
         command->right_brace->command = append_command(&command->right_brace->command, content);
+	}
     free(content);
 }
 
@@ -196,21 +204,6 @@ void parse_command(char *str, int *i, t_redirection *command)
     content = ft_substr(str, j, *i - j);
     command->command->command = append_command(&command->command->command, content);
     free(content);
-}
-
-char *ft_strrev(char *str)
-{
-	int i = 0;
-	int len = ft_strlen(str);
-	char *rev = malloc(len + 1);
-
-	rev[len] = '\0';
-	while(str[i])
-	{
-		rev[i] = str[len - i - 1];
-		i++;
-	}
-	return rev;
 }
 
 char *ft_find_single_redirect(char *str, char c)
@@ -288,22 +281,31 @@ void parse_redirection(char *str, t_redirection *command)
 	set_order(command, str);
 }
 // <<
-void open_redirection_files0(t_redirection *command)
+void open_redirection_files0(t_redirection *command, int pipe_fd[])
 {
     int i = 0;
 	int cnt;
+	char *str = ft_strdup("");
 
     while (command->double_left_brace->command && command->double_left_brace->command[i])
     {
 		while(1)
 		{
 			local = readline(">");
-			write(1, local, ft_strlen(local));
 			if(ft_strlen(local) == ft_strlen(command->double_left_brace->command[i]) && !ft_strncmp(local, command->double_left_brace->command[i], sizeof(local)))
 			{
-				printf("in\n");
+				if(command->double_left_brace->order == true)
+				{
+					dup2(pipe_fd[1],1);
+					close(pipe_fd[0]);
+				}
+				write(pipe_fd[1], str, ft_strlen(str));
 				free(local);
 				break;
+			}
+			if(command->double_left_brace->order)
+			{
+				str = ft_strjoin(str,local);
 			}
 			free(local);
 		}
@@ -313,7 +315,7 @@ void open_redirection_files0(t_redirection *command)
 
 
 // <
-void open_redirection_files1(t_redirection *command, int *fd)
+void open_redirection_files1(t_redirection *command, int *fd, int pipe_fd[])
 {
     int i = 0;
     while (command->left_brace->command && command->left_brace->command[i])
@@ -326,6 +328,12 @@ void open_redirection_files1(t_redirection *command, int *fd)
         }
         i++;
     }
+	if(command->left_brace->order == true)
+	{
+		dup2(*fd, 0);
+		dup2(pipe_fd[1], 1);
+		close(pipe_fd[0]);
+	}
 }
 // >
 void open_redirection_files2(t_redirection *command)
@@ -360,22 +368,7 @@ void open_redirection_files3(t_redirection *command)
     }
 }
 
-void free_redirection(t_redirection **redirection)
-{
-    free_command_list(&(*redirection)->double_left_brace->command);
-    free_command_list(&(*redirection)->left_brace->command);
-    free_command_list(&(*redirection)->double_right_brace->command);
-    free_command_list(&(*redirection)->right_brace->command);
-    free_command_list(&(*redirection)->command->command);
 
-    free((*redirection)->double_left_brace);
-    free((*redirection)->left_brace);
-    free((*redirection)->command);
-    free((*redirection)->double_right_brace);
-    free((*redirection)->right_brace);
-    free(*redirection);
-    *redirection = NULL;
-}
 
 int cnt_cmd(char **split)
 {
@@ -388,147 +381,34 @@ int cnt_cmd(char **split)
 	return i;
 }
 
-char	*get_path(char **envp)
+
+void exe(t_redirection *command, char **cmd, char **envp, int pipe_fd[])
 {
-	int		i;
-	char	*path;
-
-	i = 0;
-	while (envp[i])
-	{
-		if (ft_strncmp(envp[i], "PATH=", 5) == 0)
-		{
-			path = ft_strdup(envp[i] + 5);
-			return (path);
-		}
-		i++;
-	}
-	return (NULL);
-}
-
-void	check_cmd(char *cmd_path)
-{
-	if (!cmd_path)
-	{
-		perror("command not found");
-		exit(1);
-	}
-}
-
-char	*check_path(char *cmd)
-{
-	if (cmd[0] == '/')
-	{
-		if (access(cmd, X_OK) != -1)
-			return (ft_strdup(cmd));
-		else
-			return (NULL);
-	}
-	return (NULL);
-}
-
-char	*search_path(char *cmd, char *path)
-{
-	char	**paths;
-	char	*cmd_path;
-	char	*tmp;
-	int		i;
-
-	paths = ft_split(path, ':');
-	cmd_path = NULL;
-	i = 0;
-	while (paths[i])
-	{
-		tmp = ft_strjoin(paths[i], "/");
-		cmd_path = ft_strjoin(tmp, cmd);
-		if (access(cmd_path, X_OK) != -1)
-			break ;
-		free(cmd_path);
-		cmd_path = NULL;
-		i++;
-	}
-	i = 0;
-	free(paths);
-	return (cmd_path);
-}
-
-char	*get_cmd_path(char *cmd, char *path)
-{
-	char	*cmd_path;
-
-	cmd_path = check_path(cmd);
-	if (cmd_path != NULL)
-		return (cmd_path);
-	return (search_path(cmd, path));
-}
-
-void exe(t_redirection *command, char **cmd, char **envp)
-{
-	int fd;
 	char *cmd_path = NULL;
-	open_redirection_files0(command);
-	open_redirection_files1(command, &fd);
 	char *path = get_path(envp);
+	dup2(pipe_fd[0], 0);
+	close(pipe_fd[1]);
 	if(cmd)
 	{
 		cmd_path = get_cmd_path(cmd[0], path);
 	}
-	dup2(fd, 0);
 	execve(cmd_path, cmd, NULL);
 	free(path);
 }
 
-void print(t_redirection *cmd)
+
+
+void execute_left_brace(t_redirection *command, int pipe_fd[], char **envp)
 {
-	int i = 0;
-	if(cmd->left_brace->command)
+	int	fd;
+
+	open_redirection_files0(command, pipe_fd);
+	open_redirection_files1(command, &fd, pipe_fd);
+	pid_t pid;
+	pid = fork();
+	if(pid == 0)
 	{
-		while(cmd->left_brace->command[i])
-		{
-			printf("[lb]\n");
-			printf("%s\n", cmd->left_brace->command[i]);
-			i++;
-		}
-	}
-	i = 0;
-	if(cmd->double_left_brace->command)
-	{
-		while(cmd->double_left_brace->command[i])
-		{
-			printf("[dlb]\n");
-			printf("%s\n", cmd->double_left_brace->command[i]);
-			i++;
-		}
-	}
-	i = 0;
-	if(cmd->command->command)
-	{
-		while(cmd->command->command[i])
-		{
-			printf("[cmd]\n");
-			printf("%s\n", cmd->command->command[i]);
-			i++;
-		}
-	}
-	i = 0;
-	if(cmd->right_brace->command)
-	{
-		while(cmd->right_brace->command[i])
-		{
-			printf("[rb]\n");
-			printf("%s\n", cmd->right_brace->command[i]);
-			i++;
-		}
-	}
-	i = 0;
-	if(cmd->double_right_brace->command)
-	{
-		while(cmd->double_right_brace->command[i])
-		{
-			printf("[drb]\n");
-			printf("%s\n", cmd->double_right_brace->command[i]);
-			i++;
-		}
+		exe(command, command->command->command, envp, pipe_fd);
 	}
 }
 
@@ -550,13 +430,23 @@ int main(int argc, char **argv, char **envp)
 		parse_redirection(split[i], command[i]);
 
 		print(command[i]);
+		i++;
+	}
+	i = 0;
+	while(split[i])
+	{
+		pid_t pid;
+		pid = fork();
+		if(pid == 0)
+		{
+			int pipe_fd[2];
+			pipe(pipe_fd);
+			execute_left_brace(command[i], pipe_fd, envp);
+			wait(NULL);
+			close(pipe_fd[0]);
+			close(pipe_fd[1]);
 
-		exe(command[i] ,command[i]->command->command,envp);
-
-		// open_redirection_files2(command[i]);
-		// open_redirection_files3(command[i]);
-
-		// free_redirection(&command[i]);
+		}
 		i++;
 	}
 	i = 0;
@@ -567,8 +457,8 @@ int main(int argc, char **argv, char **envp)
 	}
 	free(split);
 	free(str);
+	wait(NULL);
     return 0;
 }
 
 //만약에 실패시 dup2사용 아니면
-.
