@@ -1,2 +1,2 @@
 all:
-	cc main.c libft/libft.a -lreadline -g -fsanitize=address
+	cc *.c libft/libft.a -lreadline -g -fsanitize=address
