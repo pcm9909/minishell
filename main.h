@@ -31,4 +31,6 @@ char	*get_cmd_path(char *cmd, char *path);
 
 char *ft_strrev(char *str);
 
-void free_redirection(t_redirection **redirection);
+void free_command_list(char ***command);
+
+	void free_redirection(t_redirection **redirection);
