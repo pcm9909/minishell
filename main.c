@@ -1,6 +1,7 @@
 #include "main.h"
 
 char *local;
+int pipe_fd[2]; // 전역 변수로 선언
 
 int is_whitespace(int c)
 {
@@ -299,7 +300,7 @@ void parse_redirection(char *str, t_redirection *command)
     set_order(command, str);
 }
 
-void open_redirection_files(t_redirection *command, int pipe_fd[])
+void open_redirection_files(t_redirection *command)
 {
     int i = 0;
     int fd;
@@ -344,6 +345,10 @@ void open_redirection_files(t_redirection *command, int pipe_fd[])
             dup2(fd, 0);
             dup2(pipe_fd[1], 1);
             close(pipe_fd[0]);
+        }
+        else
+        {
+            dup2(fd, 0);
         }
         close(fd);
         i++;
@@ -431,6 +436,7 @@ void execute_command(t_redirection *command, char **envp, int input_fd, int outp
             dup2(output_fd, 1);
             close(output_fd);
         }
+        open_redirection_files(command);
         exe(command, command->command->command, envp);
     }
     else
@@ -453,7 +459,6 @@ int main(int argc, char **argv, char **envp)
     int cnt = cnt_cmd(split);
     int i = 0;
     t_redirection **command = (malloc(sizeof(t_redirection *) * cnt));
-    int pipe_fd[2];
     int input_fd = 0;
 
     while (split[i])
@@ -493,6 +498,8 @@ int main(int argc, char **argv, char **envp)
     }
     free(split);
     free(str);
+
     wait(NULL);
+
     return 0;
 }
