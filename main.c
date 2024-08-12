@@ -185,6 +185,28 @@ void parse_right_redirection(char *str, int *i, t_redirection *command)
     free(content);
 }
 
+// char *handle_double_quotes(const char *str, int *i)
+// {
+//     char *buffer = ft_strdup("");
+//     char *temp;
+//     (*i)++; // Skip the initial double quote
+
+//     while (str[*i] && str[*i] != '"')
+//     {
+//         temp = ft_strjoin(buffer, (char[]){str[*i], '\0'});
+//         free(buffer);
+//         buffer = temp;
+//         (*i)++;
+//     }
+
+//     if (str[*i] == '"')
+//     {
+//         (*i)++; // Skip quotes
+//     }
+
+//     return buffer;
+// }
+
 void parse_command(char *str, int *i, t_redirection *command)
 {
     int j;
@@ -192,12 +214,19 @@ void parse_command(char *str, int *i, t_redirection *command)
 
     while (is_whitespace(str[*i]))
         (*i)++;
-    j = *i;
-    while (str[*i] && !is_whitespace(str[*i]) && str[*i] != '>' && str[*i] != '<')
-        (*i)++;
-    if (j == *i)
-        return;
-    content = ft_substr(str, j, *i - j);
+    if (str[*i] == '"')
+    {
+        content = handle_double_quotes(str, i);
+    }
+    else
+    {
+        j = *i;
+        while (str[*i] && !is_whitespace(str[*i]) && str[*i] != '>' && str[*i] != '<')
+            (*i)++;
+        if (j == *i)
+            return;
+        content = ft_substr(str, j, *i - j);
+    }
     command->command->command = append_command(&command->command->command, content);
     free(content);
 }
@@ -282,7 +311,6 @@ void open_redirection_files(t_redirection *command, int pipe_fd[])
     int i = 0;
     int fd;
 
-    // Handle double left brace (<<)
     while (command->double_left_brace->command && command->double_left_brace->command[i])
     {
         char *str = ft_strdup("");
@@ -299,6 +327,7 @@ void open_redirection_files(t_redirection *command, int pipe_fd[])
                 write(pipe_fd[1], str, ft_strlen(str));
                 free(local);
                 break;
+
             }
             if (command->double_left_brace->order)
             {
@@ -309,7 +338,6 @@ void open_redirection_files(t_redirection *command, int pipe_fd[])
         i++;
     }
 
-    // Handle left brace (<)
     i = 0;
     while (command->left_brace->command && command->left_brace->command[i])
     {
@@ -329,7 +357,6 @@ void open_redirection_files(t_redirection *command, int pipe_fd[])
         i++;
     }
 
-    // Handle right brace (>)
     i = 0;
     while (command->right_brace->command && command->right_brace->command[i])
     {
@@ -347,7 +374,6 @@ void open_redirection_files(t_redirection *command, int pipe_fd[])
         i++;
     }
 
-    // Handle double right brace (>>)
     i = 0;
     while (command->double_right_brace->command && command->double_right_brace->command[i])
     {
