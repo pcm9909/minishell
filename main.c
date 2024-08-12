@@ -185,27 +185,20 @@ void parse_right_redirection(char *str, int *i, t_redirection *command)
     free(content);
 }
 
-// char *handle_double_quotes(const char *str, int *i)
-// {
-//     char *buffer = ft_strdup("");
-//     char *temp;
-//     (*i)++; // Skip the initial double quote
-
-//     while (str[*i] && str[*i] != '"')
-//     {
-//         temp = ft_strjoin(buffer, (char[]){str[*i], '\0'});
-//         free(buffer);
-//         buffer = temp;
-//         (*i)++;
-//     }
-
-//     if (str[*i] == '"')
-//     {
-//         (*i)++; // Skip quotes
-//     }
-
-//     return buffer;
-// }
+char *handle_double_quotes(const char *str, int *i)
+{
+    int start = ++(*i);
+    while (str[*i] && str[*i] != '"')
+        (*i)++;
+    if (str[*i] != '"')
+    {
+        printf("zsh: parse error near `\"'\n");
+        exit(258);
+    }
+    char *content = ft_substr(str, start, *i - start);
+    (*i)++;
+    return content;
+}
 
 void parse_command(char *str, int *i, t_redirection *command)
 {
@@ -327,7 +320,6 @@ void open_redirection_files(t_redirection *command, int pipe_fd[])
                 write(pipe_fd[1], str, ft_strlen(str));
                 free(local);
                 break;
-
             }
             if (command->double_left_brace->order)
             {
@@ -403,12 +395,10 @@ int cnt_cmd(char **split)
     return i;
 }
 
-void exe(t_redirection *command, char **cmd, char **envp, int pipe_fd[])
+void exe(t_redirection *command, char **cmd, char **envp)
 {
     char *cmd_path = NULL;
     char *path = get_path(envp);
-    dup2(pipe_fd[0], 0);
-    close(pipe_fd[1]);
     if (cmd)
     {
         cmd_path = get_cmd_path(cmd[0], path);
@@ -417,16 +407,9 @@ void exe(t_redirection *command, char **cmd, char **envp, int pipe_fd[])
     free(path);
 }
 
-void execute_command(t_redirection *command, char **envp)
+void execute_command(t_redirection *command, char **envp, int input_fd, int output_fd)
 {
-    int pipe_fd[2];
     pid_t pid;
-
-    if (pipe(pipe_fd) == -1)
-    {
-        perror("pipe");
-        exit(EXIT_FAILURE);
-    }
 
     pid = fork();
     if (pid == -1)
@@ -438,14 +421,25 @@ void execute_command(t_redirection *command, char **envp)
     if (pid == 0)
     {
         // Child process
-        open_redirection_files(command, pipe_fd);
-        exe(command, command->command->command, envp, pipe_fd);
+        if (input_fd != 0)
+        {
+            dup2(input_fd, 0);
+            close(input_fd);
+        }
+        if (output_fd != 1)
+        {
+            dup2(output_fd, 1);
+            close(output_fd);
+        }
+        exe(command, command->command->command, envp);
     }
     else
     {
         // Parent process
-        close(pipe_fd[0]);
-        close(pipe_fd[1]);
+        if (input_fd != 0)
+            close(input_fd);
+        if (output_fd != 1)
+            close(output_fd);
         wait(NULL);
     }
 }
@@ -459,6 +453,8 @@ int main(int argc, char **argv, char **envp)
     int cnt = cnt_cmd(split);
     int i = 0;
     t_redirection **command = (malloc(sizeof(t_redirection *) * cnt));
+    int pipe_fd[2];
+    int input_fd = 0;
 
     while (split[i])
     {
@@ -470,11 +466,23 @@ int main(int argc, char **argv, char **envp)
         i++;
     }
 
-    i = 0;
-    while (split[i])
+    for (i = 0; i < cnt; i++)
     {
-        execute_command(command[i], envp);
-        i++;
+        if (i < cnt - 1)
+        {
+            if (pipe(pipe_fd) == -1)
+            {
+                perror("pipe");
+                exit(EXIT_FAILURE);
+            }
+            execute_command(command[i], envp, input_fd, pipe_fd[1]);
+            close(pipe_fd[1]);
+            input_fd = pipe_fd[0];
+        }
+        else
+        {
+            execute_command(command[i], envp, input_fd, 1);
+        }
     }
 
     i = 0;
