@@ -193,7 +193,7 @@ char *handle_double_quotes(const char *str, int *i)
         (*i)++;
     if (str[*i] != '"')
     {
-        printf("zsh: parse error near `\"'\n");
+        printf("parse error near `\"'\n");
         exit(258);
     }
     char *content = ft_substr(str, start, *i - start);
@@ -316,9 +316,9 @@ void open_redirection_files(t_redirection *command)
                 if (command->double_left_brace->order == true)
                 {
                     dup2(pipe_fd[1], 1);
+					write(pipe_fd[1], str, ft_strlen(str));
                     close(pipe_fd[0]);
                 }
-                write(pipe_fd[1], str, ft_strlen(str));
                 free(local);
                 break;
             }
@@ -343,12 +343,9 @@ void open_redirection_files(t_redirection *command)
         if (command->left_brace->order == true)
         {
             dup2(fd, 0);
-            dup2(pipe_fd[1], 1);
-            close(pipe_fd[0]);
-        }
-        else
-        {
-            dup2(fd, 0);
+			//이부분 문제임
+			//dup2(pipe_fd[1], 1);
+            //close(pipe_fd[0]);
         }
         close(fd);
         i++;
@@ -442,10 +439,10 @@ void execute_command(t_redirection *command, char **envp, int input_fd, int outp
     else
     {
         // Parent process
-        if (input_fd != 0)
-            close(input_fd);
-        if (output_fd != 1)
-            close(output_fd);
+        // if (input_fd != 0)
+        //     close(input_fd);
+        // if (output_fd != 1)
+        //     close(output_fd);
         wait(NULL);
     }
 }
