@@ -308,26 +308,36 @@ void open_redirection_files(t_redirection *command)
     while (command->double_left_brace->command && command->double_left_brace->command[i])
     {
         char *str = ft_strdup("");
-        while (1)
-        {
-            local = readline(">");
-            if (ft_strlen(local) == ft_strlen(command->double_left_brace->command[i]) && !ft_strncmp(local, command->double_left_brace->command[i], sizeof(local)))
-            {
-                if (command->double_left_brace->order == true)
-                {
-                    dup2(pipe_fd[1], 1);
-					write(pipe_fd[1], str, ft_strlen(str));
-                    close(pipe_fd[0]);
-                }
-                free(local);
-                break;
-            }
-            if (command->double_left_brace->order)
-            {
-                str = ft_strjoin(str, local);
-            }
-            free(local);
-        }
+		pid_t pid;
+
+		pid = fork();
+		if(pid == 0)
+		{
+			while (1)
+			{
+				local = readline(">");
+				if (ft_strlen(local) == ft_strlen(command->double_left_brace->command[i]) && !ft_strncmp(local, command->double_left_brace->command[i], sizeof(local)))
+				{
+					if (command->double_left_brace->order == true)
+					{
+						dup2(pipe_fd[1], 1);
+						write(pipe_fd[1], str, ft_strlen(str));
+						close(pipe_fd[0]);
+					}
+					free(local);
+					break;
+				}
+				if (command->double_left_brace->order)
+				{
+					str = ft_strjoin(str, local);
+				}
+				free(local);
+			}
+		}
+		else
+    	{
+			wait(NULL);
+    	}
         i++;
     }
 
