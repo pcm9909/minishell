@@ -411,6 +411,10 @@ int cnt_cmd(char **split)
 {
     int i = 0;
 
+	if(!split)
+	{
+		return 0;
+	}
     while (split[i])
     {
         i++;
@@ -470,54 +474,68 @@ void execute_command(t_redirection *command, char **envp, int input_fd, int outp
 
 int main(int argc, char **argv, char **envp)
 {
-    if (argc == 1)
-        exit(1);
-    char *str = ft_strdup(argv[1]);
-    char **split = ft_split(str, '|');
-    int cnt = cnt_cmd(split);
-    int i = 0;
-    t_redirection **command = (malloc(sizeof(t_redirection *) * cnt));
-    int input_fd = 0;
+	char *str = ft_strdup("");
+	while(str)
+	{
+		str = readline("command : ");
+		if(str)
+		{
+			char **split = ft_split(str, '|');
+			int cnt = cnt_cmd(split);
+			int i = 0;
+			t_redirection **command = (malloc(sizeof(t_redirection *) * cnt));
+			int input_fd = 0;
+			if(split)
+			{
+				while (split[i])
+				{
+					initialize_redirection(&command[i]);
+					if (str == NULL)
+						exit(EXIT_FAILURE);
+					parse_redirection(split[i], command[i]);
+					print(command[i]);
+					i++;
+				}
+			}
 
-    while (split[i])
-    {
-        initialize_redirection(&command[i]);
-        if (str == NULL)
-            exit(EXIT_FAILURE);
-        parse_redirection(split[i], command[i]);
-        print(command[i]);
-        i++;
-    }
+			for (i = 0; i < cnt; i++)
+			{
+				if (i < cnt - 1)
+				{
+					if (pipe(pipe_fd) == -1)
+					{
+						perror("pipe");
+						exit(EXIT_FAILURE);
+					}
+					execute_command(command[i], envp, input_fd, pipe_fd[1]);
+					close(pipe_fd[1]);
+					input_fd = pipe_fd[0];
+				}
+				else
+				{
+					execute_command(command[i], envp, input_fd, 1);
+				}
+			}
 
-    for (i = 0; i < cnt; i++)
-    {
-        if (i < cnt - 1)
-        {
-            if (pipe(pipe_fd) == -1)
-            {
-                perror("pipe");
-                exit(EXIT_FAILURE);
-            }
-            execute_command(command[i], envp, input_fd, pipe_fd[1]);
-            close(pipe_fd[1]);
-            input_fd = pipe_fd[0];
-        }
-        else
-        {
-            execute_command(command[i], envp, input_fd, 1);
-        }
-    }
-
-    i = 0;
-    while (split[i])
-    {
-        free(split[i]);
-        i++;
-    }
-    free(split);
-    free(str);
-
-    wait(NULL);
-
-    return 0;
+			i = 0;
+			if(split)
+			{
+				while (split[i])
+				{
+					free(split[i]);
+					i++;
+				}
+			}
+			free(command);
+			free(split);
+			free(str);
+			wait(NULL);
+		}
+		else
+		{
+			free(str);
+			exit(0);
+		}
+	}
+	return 0;
 }
