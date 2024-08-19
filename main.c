@@ -299,7 +299,6 @@ void parse_redirection(char *str, t_redirection *command)
     }
     set_order(command, str);
 }
-
 void open_redirection_files(t_redirection *command)
 {
     int i = 0;
@@ -307,27 +306,51 @@ void open_redirection_files(t_redirection *command)
 
     while (command->double_left_brace->command && command->double_left_brace->command[i])
     {
-        char *str = ft_strdup("");
-
-        while (1)
+        int pipe_fd[2];
+        if (pipe(pipe_fd) == -1)
         {
-            local = readline(">");
-            if (ft_strlen(local) == ft_strlen(command->double_left_brace->command[i]) && !ft_strncmp(local, command->double_left_brace->command[i], sizeof(local)))
+            perror("pipe");
+            exit(EXIT_FAILURE);
+        }
+
+        pid_t pid = fork();
+        if (pid == -1)
+        {
+            perror("fork");
+            exit(EXIT_FAILURE);
+        }
+
+        if (pid == 0)
+        {
+            // Child process
+            close(pipe_fd[0]); // Close read end
+            char *str = ft_strdup("");
+            char *input;
+
+            while (1)
             {
-                if (command->double_left_brace->order == true)
+                input = readline(">");
+                if (ft_strlen(input) == ft_strlen(command->double_left_brace->command[i]) && !ft_strncmp(input, command->double_left_brace->command[i], ft_strlen(input)))
                 {
-                    dup2(pipe_fd[1], 1);
-					write(pipe_fd[1], str, ft_strlen(str));
-                    close(pipe_fd[0]);
+                    write(pipe_fd[1], str, ft_strlen(str));
+                    free(input);
+                    break;
                 }
-                free(local);
-                break;
+                str = ft_strjoin(str, input);
+                str = ft_strjoin(str, "\n");
+                free(input);
             }
-            if (command->double_left_brace->order)
-            {
-                str = ft_strjoin(str, local);
-            }
-            free(local);
+            free(str);
+            close(pipe_fd[1]); // Close write end
+            exit(0);
+        }
+        else
+        {
+            // Parent process
+            close(pipe_fd[1]); // Close write end
+            wait(NULL); // Wait for child process to finish
+            dup2(pipe_fd[0], 0); // Redirect stdin to read end of pipe
+            close(pipe_fd[0]); // Close read end
         }
         i++;
     }
@@ -344,9 +367,6 @@ void open_redirection_files(t_redirection *command)
         if (command->left_brace->order == true)
         {
             dup2(fd, 0);
-			//이부분 문제임
-			//dup2(pipe_fd[1], 1);
-            //close(pipe_fd[0]);
         }
         close(fd);
         i++;
