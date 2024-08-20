@@ -323,38 +323,38 @@ void open_redirection_files(t_redirection *command)
         if (pid == 0)
         {
             // Child process
-            close(pipe_fd[0]); // Close read end
+			close(pipe_fd[0]);
             char *str = ft_strdup("");
             char *input;
-
-            while (1)
+			input = readline(">");
+            while (input)
             {
-                input = readline(">");
-                if (ft_strlen(input) == ft_strlen(command->double_left_brace->command[i]) && !ft_strncmp(input, command->double_left_brace->command[i], ft_strlen(input)))
+				if (ft_strncmp(input, command->double_left_brace->command[i], ft_strlen(input)) == 0 && ft_strlen(input) != 0 && command->double_left_brace->order == true)
                 {
                     write(pipe_fd[1], str, ft_strlen(str));
                     free(input);
+					input = NULL;
                     break;
                 }
                 str = ft_strjoin(str, input);
                 str = ft_strjoin(str, "\n");
                 free(input);
+				input = readline(">");
             }
             free(str);
-            close(pipe_fd[1]); // Close write end
-            exit(0);
+            close(pipe_fd[1]);
         }
         else
         {
             // Parent process
-            close(pipe_fd[1]); // Close write end
-            wait(NULL); // Wait for child process to finish
-            dup2(pipe_fd[0], 0); // Redirect stdin to read end of pipe
-            close(pipe_fd[0]); // Close read end
+            close(pipe_fd[1]);
+            wait(NULL);
+            dup2(pipe_fd[0], 0);
+            close(pipe_fd[0]);
+			exit(0);
         }
         i++;
     }
-
     i = 0;
     while (command->left_brace->command && command->left_brace->command[i])
     {
@@ -430,7 +430,11 @@ void exe(t_redirection *command, char **cmd, char **envp)
     {
         cmd_path = get_cmd_path(cmd[0], path);
     }
-    execve(cmd_path, cmd, NULL);
+    if(execve(cmd_path, cmd, NULL))
+	{
+		if(cmd)
+			printf("%s: command not found\n", cmd[0]);
+	}
     free(path);
 }
 
@@ -478,6 +482,7 @@ int main(int argc, char **argv, char **envp)
 	while(str)
 	{
 		str = readline("command : ");
+
 		if(str)
 		{
 			char **split = ft_split(str, '|');
@@ -516,8 +521,19 @@ int main(int argc, char **argv, char **envp)
 					execute_command(command[i], envp, input_fd, 1);
 				}
 			}
-
-			i = 0;
+			// i = 0;
+			// if(command)
+			// {
+			// 	while(command[i])
+			// 	{
+			// 		free(command[i]->command);
+			// 		free(command[i]->double_left_brace);
+			// 		free(command[i]->double_right_brace);
+			// 		free(command[i]->left_brace);
+			// 		free(command[i]->right_brace);
+			// 		i++;
+			// 	}
+			// }
 			if(split)
 			{
 				while (split[i])
@@ -526,6 +542,7 @@ int main(int argc, char **argv, char **envp)
 					i++;
 				}
 			}
+
 			free(command);
 			free(split);
 			free(str);
