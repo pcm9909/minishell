@@ -185,16 +185,35 @@ void parse_right_redirection(char *str, int *i, t_redirection *command)
     }
     free(content);
 }
+char *handle_single_quotes(const char *str, int *i)
+{
+    int start = ++(*i);
+    char *tmp;
+    while (str[*i] && str[*i] != '\'')
+        (*i)++;
+    if (str[*i] != '\'')
+    {
+        tmp = ft_strjoin(str, readline(">"));
+        printf("%s",tmp);
+    }
+    char *content = ft_substr(tmp, start, *i - start);
+    (*i)++;
+    return content;
+}
 
 char *handle_double_quotes(const char *str, int *i)
 {
     int start = ++(*i);
     while (str[*i] && str[*i] != '"')
+    {
+        if (str[*i] == '\\' && (str[*i + 1] == '"' || str[*i + 1] == '\\'))
+            (*i)++;
         (*i)++;
+    }
     if (str[*i] != '"')
     {
-        printf("parse error near `\"'\n");
-        exit(258);
+        //이부분 join하는 걸로 수정하기 
+        printf("hi2");
     }
     char *content = ft_substr(str, start, *i - start);
     (*i)++;
@@ -211,6 +230,10 @@ void parse_command(char *str, int *i, t_redirection *command)
     if (str[*i] == '"')
     {
         content = handle_double_quotes(str, i);
+    }
+    else if (str[*i] == '\'')
+    {
+        content = handle_single_quotes(str, i);
     }
     else
     {
@@ -323,23 +346,23 @@ void open_redirection_files(t_redirection *command)
         if (pid == 0)
         {
             // Child process
-			close(pipe_fd[0]);
+            close(pipe_fd[0]);
             char *str = ft_strdup("");
             char *input;
-			input = readline(">");
+            input = readline(">");
             while (input)
             {
-				if (ft_strncmp(input, command->double_left_brace->command[i], ft_strlen(input)) == 0 && ft_strlen(input) != 0 && command->double_left_brace->order == true)
+                if (ft_strncmp(input, command->double_left_brace->command[i], ft_strlen(input)) == 0 && ft_strlen(input) != 0 && command->double_left_brace->order == true)
                 {
                     write(pipe_fd[1], str, ft_strlen(str));
                     free(input);
-					input = NULL;
+                    input = NULL;
                     break;
                 }
                 str = ft_strjoin(str, input);
                 str = ft_strjoin(str, "\n");
                 free(input);
-				input = readline(">");
+                input = readline(">");
             }
             free(str);
             close(pipe_fd[1]);
@@ -351,7 +374,7 @@ void open_redirection_files(t_redirection *command)
             wait(NULL);
             dup2(pipe_fd[0], 0);
             close(pipe_fd[0]);
-			exit(0);
+            exit(0);
         }
         i++;
     }
@@ -373,7 +396,7 @@ void open_redirection_files(t_redirection *command)
     }
 
     i = 0;
-    while (command->right_brace->command && command->right_brace->command[i] )
+    while (command->right_brace->command && command->right_brace->command[i])
     {
         fd = open(command->right_brace->command[i], O_CREAT | O_TRUNC | O_WRONLY, 0644);
         if (fd == -1)
@@ -411,10 +434,10 @@ int cnt_cmd(char **split)
 {
     int i = 0;
 
-	if(!split)
-	{
-		return 0;
-	}
+    if (!split)
+    {
+        return 0;
+    }
     while (split[i])
     {
         i++;
@@ -430,11 +453,11 @@ void exe(t_redirection *command, char **cmd, char **envp)
     {
         cmd_path = get_cmd_path(cmd[0], path);
     }
-    if(execve(cmd_path, cmd, NULL))
-	{
-		if(cmd)
-			printf("%s: command not found\n", cmd[0]);
-	}
+    if (execve(cmd_path, cmd, NULL))
+    {
+        if (cmd)
+            printf("%s: command not found\n", cmd[0]);
+    }
     free(path);
 }
 
@@ -468,111 +491,97 @@ void execute_command(t_redirection *command, char **envp, int input_fd, int outp
     else
     {
         // Parent process
-        // if (input_fd != 0)
-        //     close(input_fd);
-        // if (output_fd != 1)
-        //     close(output_fd);
+        if (input_fd != 0)
+            close(input_fd);
+        if (output_fd != 1)
+            close(output_fd);
         wait(NULL);
     }
 }
 
 char *umm(char *str)
 {
-	int len = ft_strlen(str);
-	char *tmp;
+    int len = ft_strlen(str);
+    char *tmp;
 
-	len--;
-	while(is_whitespace(str[len]) > 0 && len > 0)
-	{
-		len--;
-	}
-	if(str[len] == '|')
-	{
-		tmp = ft_strjoin(str, readline(">"));
-	}
-	else
-		return (str);
-	return(umm(tmp));
+    len--;
+    while (is_whitespace(str[len]) > 0 && len > 0)
+    {
+        len--;
+    }
+    if (str[len] == '|')
+    {
+        tmp = ft_strjoin(str, readline(">"));
+    }
+    else
+        return (str);
+    return (umm(tmp));
 }
 
 int main(int argc, char **argv, char **envp)
 {
-	char *str = ft_strdup("");
-	while(str)
-	{
-		str = readline("command : ");
+    char *str = ft_strdup("");
+    while (str)
+    {
+        str = readline("command : ");
 
-		if(str)
-		{
-			str = umm(str);
-			char **split = ft_split(str, '|');
-			int cnt = cnt_cmd(split);
-			int i = 0;
-			t_redirection **command = (malloc(sizeof(t_redirection *) * cnt));
-			int input_fd = 0;
-			if(split)
-			{
-				while (split[i])
-				{
-					initialize_redirection(&command[i]);
-					if (str == NULL)
-						exit(EXIT_FAILURE);
-					parse_redirection(split[i], command[i]);
-					print(command[i]);
-					i++;
-				}
-			}
+        if (str)
+        {
+            str = umm(str);
+            char **split = ft_split(str, '|');
+            int cnt = cnt_cmd(split);
+            int i = 0;
+            t_redirection **command = (malloc(sizeof(t_redirection *) * cnt));
+            int input_fd = 0;
+            if (split)
+            {
+                while (split[i])
+                {
+                    initialize_redirection(&command[i]);
+                    if (str == NULL)
+                        exit(EXIT_FAILURE);
+                    parse_redirection(split[i], command[i]);
+                    print(command[i]);
+                    i++;
+                }
+            }
 
-			for (i = 0; i < cnt; i++)
-			{
-				if (i < cnt - 1)
-				{
-					if (pipe(pipe_fd) == -1)
-					{
-						perror("pipe");
-						exit(EXIT_FAILURE);
-					}
-					execute_command(command[i], envp, input_fd, pipe_fd[1]);
-					close(pipe_fd[1]);
-					input_fd = pipe_fd[0];
-				}
-				else
-				{
-					execute_command(command[i], envp, input_fd, 1);
-				}
-			}
-			// i = 0;
-			// if(command)
-			// {
-			// 	while(command[i])
-			// 	{
-			// 		free(command[i]->command);
-			// 		free(command[i]->double_left_brace);
-			// 		free(command[i]->double_right_brace);
-			// 		free(command[i]->left_brace);
-			// 		free(command[i]->right_brace);
-			// 		i++;
-			// 	}
-			// }
-			if(split)
-			{
-				while (split[i])
-				{
-					free(split[i]);
-					i++;
-				}
-			}
+            pid_t *pids = malloc(sizeof(pid_t) * cnt);
+            for (i = 0; i < cnt; i++)
+            {
+                pids[i] = fork();
+                if (pids[i] == 0)
+                {
+                    execute_command(command[i], envp, 0, 1);
+                    exit(0);
+                }
+            }
 
-			free(command);
-			free(split);
-			free(str);
-			wait(NULL);
-		}
-		else
-		{
-			free(str);
-			exit(0);
-		}
-	}
-	return 0;
+            for (i = 0; i < cnt; i++)
+            {
+                waitpid(pids[i], NULL, 0);
+            }
+
+            if (split)
+            {
+                while (split[i])
+                {
+                    free(split[i]);
+                    i++;
+                }
+            }
+
+            free(command);
+            free(split);
+            free(str);
+            free(pids);
+            wait(NULL);
+        }
+        else
+        {
+            free(str);
+            exit(0);
+        }
+    }
+    return 0;
 }
