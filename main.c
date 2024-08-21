@@ -373,7 +373,7 @@ void open_redirection_files(t_redirection *command)
     }
 
     i = 0;
-    while (command->right_brace->command && command->right_brace->command[i])
+    while (command->right_brace->command && command->right_brace->command[i] )
     {
         fd = open(command->right_brace->command[i], O_CREAT | O_TRUNC | O_WRONLY, 0644);
         if (fd == -1)
@@ -476,6 +476,25 @@ void execute_command(t_redirection *command, char **envp, int input_fd, int outp
     }
 }
 
+char *umm(char *str)
+{
+	int len = ft_strlen(str);
+	char *tmp;
+
+	len--;
+	while(is_whitespace(str[len]) > 0 && len > 0)
+	{
+		len--;
+	}
+	if(str[len] == '|')
+	{
+		tmp = ft_strjoin(str, readline(">"));
+	}
+	else
+		return (str);
+	return(umm(tmp));
+}
+
 int main(int argc, char **argv, char **envp)
 {
 	char *str = ft_strdup("");
@@ -485,6 +504,7 @@ int main(int argc, char **argv, char **envp)
 
 		if(str)
 		{
+			str = umm(str);
 			char **split = ft_split(str, '|');
 			int cnt = cnt_cmd(split);
 			int i = 0;
