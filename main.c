@@ -1,7 +1,6 @@
 #include "main.h"
 
 char *local;
-int pipe_fd[2]; // 전역 변수로 선언
 
 int is_whitespace(int c)
 {
@@ -362,6 +361,7 @@ void open_redirection_files(t_redirection *command)
                 }
                 str = ft_strjoin(str, input);
                 str = ft_strjoin(str, "\n");
+				add_history(str);
                 free(input);
                 input = readline(">");
             }
@@ -505,6 +505,7 @@ char *umm(char *str)
     if (str[len] == '|')
     {
         tmp = ft_strjoin(str, readline(">"));
+		add_history(tmp);
     }
     else
         return (str);
@@ -521,7 +522,8 @@ int main(int argc, char **argv, char **envp)
         if (pid == 0)
         {
             str = readline("command : ");
-
+			if(ft_strlen(str))
+				add_history(str);
             if (str)
             {
                 str = umm(str);
