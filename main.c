@@ -361,12 +361,13 @@ void open_redirection_files(t_redirection *command)
                 }
                 str = ft_strjoin(str, input);
                 str = ft_strjoin(str, "\n");
-				add_history(str);
+                add_history(str);
                 free(input);
                 input = readline(">");
             }
             free(str);
             close(pipe_fd[1]);
+            exit(EXIT_SUCCESS);
         }
         else
         {
@@ -375,7 +376,6 @@ void open_redirection_files(t_redirection *command)
             wait(NULL);
             dup2(pipe_fd[0], 0);
             close(pipe_fd[0]);
-            exit(0);
         }
         i++;
     }
@@ -505,7 +505,7 @@ char *umm(char *str)
     if (str[len] == '|')
     {
         tmp = ft_strjoin(str, readline(">"));
-		add_history(tmp);
+        add_history(tmp);
     }
     else
         return (str);
@@ -522,8 +522,8 @@ int main(int argc, char **argv, char **envp)
         if (pid == 0)
         {
             str = readline("command : ");
-			if(ft_strlen(str))
-				add_history(str);
+            if (ft_strlen(str))
+                add_history(str);
             if (str)
             {
                 str = umm(str);
@@ -588,12 +588,12 @@ int main(int argc, char **argv, char **envp)
                 free(command);
                 free(split);
                 free(str);
-                wait(NULL);
+                exit(EXIT_SUCCESS);
             }
             else
             {
                 free(str);
-                exit(0);
+                exit(EXIT_SUCCESS);
             }
         }
         else
