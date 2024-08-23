@@ -5,7 +5,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <readline/readline.h>
-
+#include <sys/wait.h>
+#include <readline/history.h>
 
 typedef struct s_command
 {
