@@ -23,12 +23,14 @@ t_command *create_command(void)
 
 void initialize_redirection(t_redirection **redirection)
 {
+	//leak
     *redirection = malloc(sizeof(t_redirection));
     if (!*redirection)
     {
         perror("malloc");
         exit(EXIT_FAILURE);
     }
+	//leak
     (*redirection)->double_left_brace = create_command();
     (*redirection)->double_right_brace = create_command();
     (*redirection)->command = create_command();
@@ -514,8 +516,8 @@ char *umm(char *str)
 
 int main(int argc, char **argv, char **envp)
 {
-    char *str = ft_strdup("");
-    while (str)
+    char *str;
+    while (1)
     {
         pid_t pid;
         pid = fork();
