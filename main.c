@@ -522,22 +522,32 @@ void execute_command(t_redirection *command, char **envp, int input_fd, int outp
 
 char *umm(char *str)
 {
-    int len = ft_strlen(str);
-    char *tmp;
+    if (str)
+    {
+        int len = ft_strlen(str);
+        char *tmp;
 
-    len--;
-    while (is_whitespace(str[len]) > 0 && len > 0)
-    {
+        if (len == 0) // 문자열이 비어 있는 경우
+            return str;
+
         len--;
+        while (is_whitespace(str[len]) > 0 && len > 0)
+        {
+            len--;
+        }
+        if (is_whitespace(str[len]) && len == 0) // 문자열이 공백만 포함하는 경우
+            return str;
+
+        if (str[len] == '|')
+        {
+            tmp = ft_strjoin(str, readline(">"));
+            add_history(tmp);
+        }
+        else
+            return str;
+        return umm(tmp);
     }
-    if (str[len] == '|')
-    {
-        tmp = ft_strjoin(str, readline(">"));
-        add_history(tmp);
-    }
-    else
-        return (str);
-    return (umm(tmp));
+    return NULL;
 }
 
 int main(int argc, char **argv, char **envp)
