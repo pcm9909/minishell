@@ -399,7 +399,10 @@ void open_redirection_files(t_redirection *command)
             // Parent process
             close(pipe_fd[1]);
             wait(NULL);
-            dup2(pipe_fd[0], 0);
+            if (command->double_left_brace->command[i + 1] == NULL) // 마지막 <<의 경우
+            {
+                dup2(pipe_fd[0], 0);
+            }
             close(pipe_fd[0]);
         }
         i++;
@@ -479,7 +482,7 @@ void exe(t_redirection *command, char **cmd, char **envp)
     {
         cmd_path = get_cmd_path(cmd[0], path);
     }
-    if (execve(cmd_path, cmd, NULL))
+    if (execve(cmd_path, cmd, envp))
     {
         if (cmd)
             printf("%s: command not found\n", cmd[0]);
