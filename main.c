@@ -21,21 +21,44 @@ t_command *create_command(void)
     return cmd;
 }
 
+void free_command(t_command *cmd)
+{
+    if (cmd)
+    {
+        if (cmd->command)
+        {
+            free_command_list(&cmd->command);
+        }
+        free(cmd);
+    }
+}
+
 void initialize_redirection(t_redirection **redirection)
 {
-	//leak
     *redirection = malloc(sizeof(t_redirection));
     if (!*redirection)
     {
         perror("malloc");
         exit(EXIT_FAILURE);
     }
-	//leak
     (*redirection)->double_left_brace = create_command();
     (*redirection)->double_right_brace = create_command();
     (*redirection)->command = create_command();
     (*redirection)->left_brace = create_command();
     (*redirection)->right_brace = create_command();
+}
+
+void free_redirection(t_redirection *redirection)
+{
+    if (redirection)
+    {
+        free_command(redirection->double_left_brace);
+        free_command(redirection->double_right_brace);
+        free_command(redirection->command);
+        free_command(redirection->left_brace);
+        free_command(redirection->right_brace);
+        free(redirection);
+    }
 }
 
 char **allocate_and_copy(char **cmd, int size)
@@ -576,6 +599,11 @@ int main(int argc, char **argv, char **envp)
                 for (i = 0; i < cnt; i++)
                 {
                     wait(NULL);
+                }
+
+                for (i = 0; i < cnt; i++)
+                {
+                    free_redirection(command[i]);
                 }
 
                 if (split)
