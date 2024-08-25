@@ -410,17 +410,55 @@ void open_redirection_files(t_redirection *command)
     i = 0;
     while (command->left_brace->command && command->left_brace->command[i])
     {
-        fd = open(command->left_brace->command[i], O_RDONLY);
-        if (fd == -1)
+        int pipe_fd[2];
+        if (pipe(pipe_fd) == -1)
         {
-            perror(command->left_brace->command[i]);
+            perror("pipe");
             exit(EXIT_FAILURE);
         }
-        if (command->left_brace->order == true)
+
+        pid_t pid = fork();
+        if (pid == -1)
         {
-            dup2(fd, 0);
+            perror("fork");
+            exit(EXIT_FAILURE);
         }
-        close(fd);
+
+        if (pid == 0)
+        {
+            // Child process
+            close(pipe_fd[0]);
+            fd = open(command->left_brace->command[i], O_RDONLY);
+            if (fd == -1)
+            {
+                perror(command->left_brace->command[i]);
+                exit(EXIT_FAILURE);
+            }
+            char buffer[1024];
+            ssize_t bytes_read;
+            while ((bytes_read = read(fd, buffer, sizeof(buffer))) > 0)
+            {
+                if (write(pipe_fd[1], buffer, bytes_read) == -1)
+                {
+                    perror("write");
+                    exit(EXIT_FAILURE);
+                }
+            }
+            close(fd);
+            close(pipe_fd[1]);
+            exit(EXIT_SUCCESS);
+        }
+        else
+        {
+            // Parent process
+            close(pipe_fd[1]);
+            wait(NULL);
+            if (command->left_brace->command[i + 1] == NULL && command->left_brace->order) // 마지막 <의 경우
+            {
+                dup2(pipe_fd[0], 0);
+            }
+            close(pipe_fd[0]);
+        }
         i++;
     }
 
@@ -433,6 +471,7 @@ void open_redirection_files(t_redirection *command)
             perror(command->right_brace->command[i]);
             exit(EXIT_FAILURE);
         }
+        printf("right : %d\n", command->right_brace->order);
         if (command->right_brace->order == true)
         {
             dup2(fd, 1);
@@ -450,6 +489,7 @@ void open_redirection_files(t_redirection *command)
             perror(command->double_right_brace->command[i]);
             exit(EXIT_FAILURE);
         }
+        printf("double right : %d\n", command->right_brace->order);
         if (command->double_right_brace->order == true)
         {
             dup2(fd, 1);
