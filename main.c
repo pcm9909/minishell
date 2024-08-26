@@ -300,6 +300,7 @@ void set_order(t_redirection *command, char *str)
 {
     int dual;
     int single;
+	char *rev;
 
     dual = ft_strlen(ft_strnstr(str, "<<", sizeof(str)));
     single = ft_strlen(ft_find_single_redirect(str, '<'));
@@ -311,8 +312,9 @@ void set_order(t_redirection *command, char *str)
     {
         command->left_brace->order = true;
     }
-    dual = ft_strlen(ft_strnstr(str, ">>", ft_strlen(str)));
-    single = ft_strlen(ft_find_single_redirect(str, '>'));
+	rev = ft_strrev(str);
+    dual = ft_strlen(ft_strnstr(rev, ">>", ft_strlen(str)));
+    single = ft_strlen(ft_find_single_redirect(rev, '>'));
     if (dual > single)
     {
         command->double_right_brace->order = true;
@@ -321,6 +323,7 @@ void set_order(t_redirection *command, char *str)
     {
         command->right_brace->order = true;
     }
+	free(rev);
 }
 
 void parse_redirection(char *str, t_redirection *command)
@@ -471,12 +474,10 @@ void open_redirection_files(t_redirection *command)
             perror(command->right_brace->command[i]);
             exit(EXIT_FAILURE);
         }
-        printf("right : %d\n", command->right_brace->order);
         if (command->right_brace->order == true)
         {
             dup2(fd, 1);
         }
-        close(fd);
         i++;
     }
 
@@ -489,12 +490,10 @@ void open_redirection_files(t_redirection *command)
             perror(command->double_right_brace->command[i]);
             exit(EXIT_FAILURE);
         }
-        printf("double right : %d\n", command->right_brace->order);
         if (command->double_right_brace->order == true)
         {
             dup2(fd, 1);
         }
-        close(fd);
         i++;
     }
 }
@@ -661,13 +660,13 @@ int main(int argc, char **argv, char **envp)
 
                 if (split)
                 {
+					i = 0;
                     while (split[i])
                     {
                         free(split[i]);
                         i++;
                     }
                 }
-
                 free(command);
                 free(split);
                 free(str);
